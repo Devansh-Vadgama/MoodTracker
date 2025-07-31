@@ -1,66 +1,143 @@
-import { View, Text, TouchableOpacity, TextInput, Button, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useState } from 'react';
-import { moods } from '../../constants/moods';
-import { saveMood } from '../../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { format } from 'date-fns';
 
-export default function LogMoodScreen() {
-  const [selected, setSelected] = useState(null);
+const moods = [
+  { label: 'Amazing', emoji: '🤩' },
+  { label: 'Happy', emoji: '😊' },
+  { label: 'Neutral', emoji: '😐' },
+  { label: 'Sad', emoji: '😢' },
+  { label: 'Angry', emoji: '😠' },
+];
+
+export default function LogMood() {
+  const [selected, setSelected] = useState('Amazing');
   const [note, setNote] = useState('');
   const router = useRouter();
 
   const handleSave = async () => {
-    if (!selected) return alert("Please select a mood!");
-    await saveMood({
-      ...selected,
+    const mood = moods.find((m) => m.label === selected);
+    const newEntry = {
+      mood: mood?.emoji || '',
+      label: selected,
       note,
-      date: new Date().toDateString()
-    });
-    router.replace('/');
+      date: format(new Date(), 'EEEE, MMMM d'),
+    };
+
+    try {
+      const existing = await AsyncStorage.getItem('moodHistory');
+      const history = existing ? JSON.parse(existing) : [];
+      history.push(newEntry);
+      await AsyncStorage.setItem('moodHistory', JSON.stringify(history));
+      router.back(); // Go back to home
+    } catch (err) {
+      console.error('Failed to save mood:', err);
+      Alert.alert('Error', 'Could not save your mood.');
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>How are you feeling today?</Text>
-      <View style={styles.moodList}>
-        {moods.map((m, idx) => (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Edit Your Mood</Text>
+      <Text style={styles.subtitle}>Take a moment to check in with yourself.</Text>
+
+      <Text style={styles.question}>How are you feeling?</Text>
+      <View style={styles.moodRow}>
+        {moods.map((m) => (
           <TouchableOpacity
-            key={idx}
-            style={[styles.moodItem, selected === m && styles.selectedMood]}
-            onPress={() => setSelected(m)}
-          >
-            <Text style={styles.moodText}>{m.emoji} {m.label}</Text>
+            key={m.label}
+            style={[styles.moodItem, selected === m.label && styles.moodSelected]}
+            onPress={() => setSelected(m.label)}>
+            <Text style={styles.emoji}>{m.emoji}</Text>
+            <Text style={styles.moodLabel}>{m.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
+
       <TextInput
-        placeholder="Add a note (optional)"
+        style={styles.input}
+        placeholder="What's on your mind today?"
+        placeholderTextColor="#74c1deff"
         value={note}
         onChangeText={setNote}
-        style={styles.input}
+        maxLength={200}
+        multiline
       />
-      <Button title="Save Mood" onPress={handleSave} />
-    </View>
+
+      <TouchableOpacity style={styles.button} onPress={handleSave}>
+        <Text style={styles.buttonText}>Update Mood</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: '#fff' },
-  header: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  moodList: { marginBottom: 16 },
-  moodItem: {
-    backgroundColor: '#f0f0f0',
-    padding: 14,
-    marginVertical: 6,
-    borderRadius: 8,
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#0D1B2A', // Dark navy background
+    padding: 20,
+    paddingTop: 60,
   },
-  selectedMood: { backgroundColor: '#d0e9ff' },
-  moodText: { fontSize: 18 },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#4FC3F7', // Light blue
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#81D4FA', // Softer blue
+    marginBottom: 20,
+  },
+  question: {
+    color: '#4FC3F7',
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  moodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  moodItem: {
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+  },
+  moodSelected: {
+    backgroundColor: '#1565C0', // Blue highlight
+  },
+  emoji: {
+    fontSize: 30,
+  },
+  moodLabel: {
+    color: '#fff',
+    marginTop: 4,
+    fontSize: 12,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  }
+    borderColor: '#1565C0', // Match selection color
+    borderRadius: 10,
+    padding: 10,
+    color: '#fff',
+    fontSize: 14,
+    height: 100,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#1E88E5', // Primary blue
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
+

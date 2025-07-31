@@ -5,39 +5,35 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        headerShown: true,
-        headerStyle: { backgroundColor: '#2f95dc' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#eee',
+          backgroundColor: '#0D1B2A', // dark blue background
+          borderTopWidth: 0,
           height: 60,
-          paddingBottom: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        tabBarActiveTintColor: '#2f95dc',
-        tabBarInactiveTintColor: '#aaa',
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, focused }) => {
           let iconName;
           switch (route.name) {
             case 'index': iconName = 'home'; break;
             case 'log': iconName = 'add-circle'; break;
             case 'history': iconName = 'calendar'; break;
-            case 'stats': iconName = 'bar-chart'; break;
             default: iconName = 'help-circle';
           }
-          return <Ionicons name={iconName} size={24} color={color} />;
+
+          return (
+            <Ionicons
+              name={iconName}
+              size={focused ? 28 : 24}
+              color={focused ? '#4FC3F7' : '#aaa'} // bright blue when focused
+            />
+          );
         },
       })}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarLabel: 'Home' }} />
-      <Tabs.Screen name="log" options={{ title: 'Log Mood', tabBarLabel: 'Log' }} />
-      <Tabs.Screen name="history" options={{ title: 'History', tabBarLabel: 'History' }} />
-      <Tabs.Screen name="stats" options={{ title: 'Stats', tabBarLabel: 'Stats' }} />
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="log" />
+      <Tabs.Screen name="history" />
     </Tabs>
   );
 }

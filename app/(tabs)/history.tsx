@@ -1,46 +1,118 @@
-import { View, FlatList, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { loadMoods } from '../../utils/storage';
 
-export default function MoodHistoryScreen() {
-  const [moods, setMoods] = useState([]);
+const moods = ['All', 'Amazing', 'Happy', 'Neutral', 'Sad', 'Angry'];
+
+export default function HistoryScreen() {
+  const [entries, setEntries] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [activeMood, setActiveMood] = useState('All');
+
+  const loadMoods = async () => {
+    const data = await AsyncStorage.getItem('moodHistory');
+    if (data) {
+      const parsed = JSON.parse(data).reverse(); // latest first
+      setEntries(parsed);
+      setFiltered(parsed);
+    }
+  };
 
   useEffect(() => {
-    loadMoods().then(setMoods);
+    loadMoods();
   }, []);
 
+  const filterByMood = (mood) => {
+    setActiveMood(mood);
+    if (mood === 'All') {
+      setFiltered(entries);
+    } else {
+      const filtered = entries.filter((entry) => entry.label === mood);
+      setFiltered(filtered);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Mood History</Text>
-      <FlatList
-        data={moods}
-        keyExtractor={(_, i) => i.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.date}>{item.date}</Text>
-            <Text style={styles.label}>{item.emoji} {item.label}</Text>
-            {item.note && <Text style={styles.note}>“{item.note}”</Text>}
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
+      <Text style={styles.title}>Mood History</Text>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+        {moods.map((mood) => (
+          <TouchableOpacity
+            key={mood}
+            style={[styles.chip, activeMood === mood && styles.activeChip]}
+            onPress={() => filterByMood(mood)}>
+            <Text style={styles.chipText}>{mood}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {filtered.length === 0 ? (
+        <Text style={{ color: '#78C5A1', textAlign: 'center', marginTop: 30 }}>No entries found.</Text>
+      ) : (
+        filtered.map((entry, idx) => (
+          <View key={idx} style={styles.card}>
+            <Text style={styles.emoji}>{entry.mood}</Text>
+            <View>
+              <Text style={styles.label}>{entry.label}</Text>
+              <Text style={styles.date}>{entry.date}</Text>
+            </View>
           </View>
-        )}
-      />
-    </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: '#f2f6fc' },
-  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 10 },
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  container: {
+    flex: 1,
+    backgroundColor: '#0D1B2A', // Dark navy blue
+    padding: 20,
+    paddingTop: 60,
   },
-  date: { fontSize: 14, color: '#999' },
-  label: { fontSize: 18, fontWeight: '600', marginVertical: 4 },
-  note: { fontStyle: 'italic', color: '#444' }
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4FC3F7', // Light blue title
+    marginBottom: 10,
+  },
+  filterRow: {
+    marginBottom: 20,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: '#1B263B', // Darker blue for unselected chip
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  activeChip: {
+    backgroundColor: '#1565C0', // Active chip highlight (blue)
+  },
+  chipText: {
+    color: '#BBDEFB', // Light text
+    fontWeight: 'bold',
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E3A5F', // Mood card background
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  emoji: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  label: {
+    fontSize: 16,
+    color: '#BBDEFB', // Light blue label
+    fontWeight: 'bold',
+  },
+  date: {
+    fontSize: 13,
+    color: '#90CAF9', // Soft blue
+  },
 });
